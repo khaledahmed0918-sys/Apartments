@@ -1,4 +1,18 @@
 
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  isVerified: boolean;
+  avatar?: string;
+  joinedAt: string;
+}
+
+export interface AuthState {
+  user: User | null;
+  isLoading: boolean;
+}
+
 export interface Property {
   id: string;
   title: string;
@@ -19,10 +33,4 @@ export interface Amenity {
 export interface NavLink {
   label: string;
   href: string;
-}
-
-export interface Translations {
-  [key: string]: {
-    [key: string]: string;
-  };
 }
