@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { OTPData } from '../types';
 
 interface Props {
   isOpen: boolean;
@@ -8,32 +9,30 @@ interface Props {
   lang: 'ar' | 'en';
 }
 
-type AuthMode = 'login' | 'register' | 'otp_reg' | 'forgot' | 'otp_forgot' | 'reset_pass';
+type Mode = 'login' | 'register' | 'otp' | 'forgot' | 'reset';
 
 const AuthModal: React.FC<Props> = ({ isOpen, onClose, lang }) => {
   const isRtl = lang === 'ar';
-  const { login, registerRequest, verifyAndRegister, forgotPasswordRequest, resetPassword } = useAuth();
+  const { login, requestOTP, verifyAndRegister, resetPassword } = useAuth();
   
-  const [mode, setMode] = useState<AuthMode>('login');
+  const [mode, setMode] = useState<Mode>('login');
   const [formData, setFormData] = useState({ 
     firstName: '', fatherName: '', lastName: '', 
     email: '', pass: '', newPass: '' 
   });
   const [otpInput, setOtpInput] = useState('');
-  const [sentOTP, setSentOTP] = useState('');
+  const [currentOtpData, setCurrentOtpData] = useState<OTPData | null>(null);
+  const [timer, setTimer] = useState(0);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [timer, setTimer] = useState(300); // 5 minutes in seconds
 
   useEffect(() => {
     let interval: any;
-    if ((mode === 'otp_reg' || mode === 'otp_forgot') && timer > 0) {
-      interval = setInterval(() => setTimer(t => t - 1), 1000);
-    } else if (timer === 0) {
-      setError(isRtl ? 'انتهت صلاحية الرمز. يرجى المحاولة مجدداً.' : 'Code expired. Please try again.');
+    if (timer > 0) {
+      interval = setInterval(() => setTimer(prev => prev - 1), 1000);
     }
     return () => clearInterval(interval);
-  }, [mode, timer, isRtl]);
+  }, [timer]);
 
   if (!isOpen) return null;
 
@@ -49,75 +48,87 @@ const AuthModal: React.FC<Props> = ({ isOpen, onClose, lang }) => {
     setError('');
     const res = await login(formData.email, formData.pass);
     if (res.success) onClose();
-    else setError(isRtl ? 'البريد أو كلمة المرور غير صحيحة' : 'Invalid email or password');
+    else setError(isRtl ? 'بيانات الدخول غير صحيحة' : 'Invalid Credentials');
     setLoading(false);
   };
 
   const handleRegisterInit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const otp = await registerRequest(formData);
-    setSentOTP(otp);
-    setTimer(300);
-    setMode('otp_reg');
-    setLoading(false);
-  };
-
-  const handleVerifyRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (timer === 0) return;
-    setLoading(true);
-    const success = await verifyAndRegister(otpInput, sentOTP, formData);
-    if (success) onClose();
-    else setError(isRtl ? 'رمز التحقق غير صحيح' : 'Invalid OTP');
+    setError('');
+    const res = await requestOTP(formData.email, 'register', formData);
+    if (res.success && res.otpData) {
+      setCurrentOtpData(res.otpData);
+      setTimer(300);
+      setMode('otp');
+    } else {
+      setError(isRtl ? 'فشل إرسال الرمز. تأكد من تشغيل السيرفر.' : 'Mail failed. Check server.');
+    }
     setLoading(false);
   };
 
   const handleForgotInit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const otp = await forgotPasswordRequest(formData.email);
-    if (otp) {
-      setSentOTP(otp);
+    setError('');
+    const res = await requestOTP(formData.email, 'forgot');
+    if (res.success && res.otpData) {
+      setCurrentOtpData(res.otpData);
       setTimer(300);
-      setMode('otp_forgot');
+      setMode('otp');
     } else {
-      setError(isRtl ? 'البريد غير مسجل لدينا' : 'Email not found');
+      setError(res.message === 'Not found' ? (isRtl ? 'البريد غير مسجل' : 'Email not found') : (isRtl ? 'خطأ في السيرفر' : 'Server error'));
     }
     setLoading(false);
   };
 
-  const handleVerifyForgot = async (e: React.FormEvent) => {
+  const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (otpInput === sentOTP) setMode('reset_pass');
-    else setError(isRtl ? 'رمز غير صحيح' : 'Invalid code');
+    if (!currentOtpData) return;
+    setLoading(true);
+    setError('');
+
+    if (currentOtpData.type === 'register') {
+      const res = await verifyAndRegister(otpInput, currentOtpData);
+      if (res.success) onClose();
+      else setError(isRtl ? 'رمز غير صحيح أو منتهي' : 'Invalid or expired code');
+    } else {
+      if (otpInput === currentOtpData.code) setMode('reset');
+      else setError(isRtl ? 'رمز غير صحيح' : 'Invalid code');
+    }
+    setLoading(false);
   };
 
   const handleResetFinal = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!currentOtpData) return;
     setLoading(true);
-    const success = await resetPassword(formData.email, otpInput, sentOTP, formData.newPass);
-    if (success) onClose();
-    else setError(isRtl ? 'فشل تحديث كلمة المرور' : 'Failed to reset password');
+    const res = await resetPassword(otpInput, currentOtpData, formData.newPass);
+    if (res.success) onClose();
+    else setError(isRtl ? 'حدث خطأ' : 'Error');
     setLoading(false);
   };
 
   return (
     <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/98 backdrop-blur-2xl" onClick={onClose} />
-      <div className="relative w-full max-w-lg bg-[#0d0805] border border-[#c5a059]/20 p-8 md:p-12 luxury-shadow">
-        <div className="text-center mb-10">
-          <span className="text-4xl font-bold tracking-[0.3em] text-[#c5a059] font-luxury">DAMAC</span>
-          <div className="h-[1px] w-12 bg-[#c5a059]/40 mx-auto mt-4"></div>
+      <div className="absolute inset-0 bg-black/95 backdrop-blur-xl" onClick={onClose} />
+      <div className="relative w-full max-w-md bg-[#0d0805] border border-[#c5a059]/20 p-8 luxury-shadow">
+        <div className="text-center mb-8">
+           <h2 className="text-3xl font-luxury font-bold text-[#c5a059] tracking-widest">DAMAC</h2>
+           <p className="text-[10px] text-white/40 uppercase tracking-[0.3em] mt-2">
+             {mode === 'login' ? (isRtl ? 'دخول الشركاء' : 'PARTNER LOGIN') : 
+              mode === 'register' ? (isRtl ? 'عضوية جديدة' : 'NEW MEMBERSHIP') : 
+              mode === 'otp' ? (isRtl ? 'التحقق من الهوية' : 'SECURITY VERIFICATION') : 
+              (isRtl ? 'استعادة الوصول' : 'RECOVER ACCESS')}
+           </p>
         </div>
 
-        {error && <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-4 text-[10px] mb-6 text-center font-bold uppercase tracking-widest">{error}</div>}
+        {error && <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-3 text-[10px] mb-6 text-center font-bold uppercase tracking-widest animate-pulse">{error}</div>}
 
         {mode === 'login' && (
           <form onSubmit={handleLogin} className="space-y-6">
-            <h2 className="text-white text-center text-xs font-bold tracking-[0.2em] uppercase mb-8">{isRtl ? 'دخول الشركاء' : 'Partner Login'}</h2>
             <input 
-              type="email" placeholder={isRtl ? "البريد الإلكتروني" : "Email"} required
+              type="email" placeholder={isRtl ? "البريد الإلكتروني" : "Email Address"} required
               className="w-full bg-white/5 border border-white/10 p-4 text-sm text-white focus:border-[#c5a059] outline-none transition-all"
               onChange={e => setFormData({...formData, email: e.target.value})}
             />
@@ -126,40 +137,39 @@ const AuthModal: React.FC<Props> = ({ isOpen, onClose, lang }) => {
               className="w-full bg-white/5 border border-white/10 p-4 text-sm text-white focus:border-[#c5a059] outline-none transition-all"
               onChange={e => setFormData({...formData, pass: e.target.value})}
             />
-            <div className="flex justify-between items-center text-[10px] font-bold text-white/40 uppercase tracking-widest">
-              <button type="button" onClick={() => setMode('forgot')} className="hover:text-[#c5a059]">{isRtl ? 'نسيت كلمة المرور؟' : 'Forgot Password?'}</button>
-            </div>
-            <button className="w-full gold-gradient py-4 font-bold text-black uppercase text-xs tracking-widest hover:scale-[1.02] transition-all duration-300">
-              {loading ? '...' : (isRtl ? 'تسجيل الدخول' : 'Sign In')}
+            <button type="button" onClick={() => setMode('forgot')} className="text-[10px] text-[#c5a059] uppercase font-bold hover:underline tracking-widest">
+              {isRtl ? 'نسيت كلمة المرور؟' : 'Forgot Password?'}
+            </button>
+            <button className="w-full gold-gradient py-4 font-bold text-black uppercase text-xs tracking-widest hover:scale-[1.02] transition-transform">
+              {loading ? '...' : (isRtl ? 'تسجيل الدخول' : 'SIGN IN')}
             </button>
             <p className="text-center text-[10px] text-white/40 uppercase tracking-widest">
-              {isRtl ? 'عضو جديد؟' : 'New Member?'} 
-              <button type="button" onClick={() => setMode('register')} className="text-[#c5a059] ml-2 font-bold hover:underline">
-                {isRtl ? 'إنشاء حساب استثماري' : 'Create Account'}
+              {isRtl ? 'ليس لديك حساب؟' : "Don't have an account?"} 
+              <button type="button" onClick={() => setMode('register')} className="text-[#c5a059] ml-2 font-bold underline">
+                {isRtl ? 'سجل الآن' : 'REGISTER'}
               </button>
             </p>
           </form>
         )}
 
         {mode === 'register' && (
-          <form onSubmit={handleRegisterInit} className="space-y-5">
-            <h2 className="text-white text-center text-xs font-bold tracking-[0.2em] uppercase mb-6">{isRtl ? 'طلب انضمام للمستثمرين' : 'Investor Registration'}</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <input 
-                type="text" placeholder={isRtl ? "الاسم الأول" : "First Name"} required
-                className="bg-white/5 border border-white/10 p-4 text-sm text-white focus:border-[#c5a059] outline-none"
-                onChange={e => setFormData({...formData, firstName: e.target.value})}
-              />
-              <input 
-                type="text" placeholder={isRtl ? "اسم الأب" : "Father Name"} required
-                className="bg-white/5 border border-white/10 p-4 text-sm text-white focus:border-[#c5a059] outline-none"
-                onChange={e => setFormData({...formData, fatherName: e.target.value})}
-              />
-              <input 
-                type="text" placeholder={isRtl ? "النسبة / اللقب" : "Surname"} required
-                className="bg-white/5 border border-white/10 p-4 text-sm text-white focus:border-[#c5a059] outline-none"
-                onChange={e => setFormData({...formData, lastName: e.target.value})}
-              />
+          <form onSubmit={handleRegisterInit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+               <input 
+                  type="text" placeholder={isRtl ? "الاسم" : "First"} required
+                  className="w-full bg-white/5 border border-white/10 p-3 text-sm text-white focus:border-[#c5a059] outline-none"
+                  onChange={e => setFormData({...formData, firstName: e.target.value})}
+                />
+               <input 
+                  type="text" placeholder={isRtl ? "الأب" : "Father"} required
+                  className="w-full bg-white/5 border border-white/10 p-3 text-sm text-white focus:border-[#c5a059] outline-none"
+                  onChange={e => setFormData({...formData, fatherName: e.target.value})}
+                />
+               <input 
+                  type="text" placeholder={isRtl ? "النسبة" : "Surname"} required
+                  className="w-full bg-white/5 border border-white/10 p-3 text-sm text-white focus:border-[#c5a059] outline-none"
+                  onChange={e => setFormData({...formData, lastName: e.target.value})}
+                />
             </div>
             <input 
               type="email" placeholder={isRtl ? "البريد الإلكتروني الرسمي" : "Official Email"} required
@@ -171,65 +181,68 @@ const AuthModal: React.FC<Props> = ({ isOpen, onClose, lang }) => {
               className="w-full bg-white/5 border border-white/10 p-4 text-sm text-white focus:border-[#c5a059] outline-none"
               onChange={e => setFormData({...formData, pass: e.target.value})}
             />
-            <button className="w-full gold-gradient py-4 font-bold text-black uppercase text-xs tracking-widest mt-4">
-               {isRtl ? 'إرسال رمز التفعيل للبريد' : 'Verify Email Address'}
+            <button className="w-full gold-gradient py-4 font-bold text-black uppercase text-xs tracking-widest">
+              {loading ? '...' : (isRtl ? 'إرسال الرمز للبريد' : 'SEND CODE TO MAIL')}
             </button>
-            <button type="button" onClick={() => setMode('login')} className="w-full text-white/40 text-[9px] uppercase font-bold tracking-[0.3em]">
-               {isRtl ? 'العودة' : 'Back to Login'}
+            <button type="button" onClick={() => setMode('login')} className="w-full text-white/40 text-[9px] uppercase font-bold tracking-widest">
+              {isRtl ? 'العودة' : 'CANCEL'}
             </button>
           </form>
         )}
 
-        {(mode === 'otp_reg' || mode === 'otp_forgot') && (
-          <form onSubmit={mode === 'otp_reg' ? handleVerifyRegister : handleVerifyForgot} className="space-y-8 text-center">
-            <div className="space-y-2">
-              <h2 className="text-[#c5a059] text-xs font-bold tracking-widest uppercase">{isRtl ? 'تحقق من بريدك الوارد' : 'Check Your Inbox'}</h2>
-              <p className="text-[10px] text-white/40 uppercase tracking-widest leading-relaxed">
-                {isRtl ? `أرسلنا الرمز إلى ${formData.email}` : `Code sent to ${formData.email}`}
-              </p>
-            </div>
-            <div className="relative">
-              <input 
-                type="text" maxLength={6} required placeholder="------"
-                className="w-full bg-transparent border-b-2 border-[#c5a059] py-4 text-4xl text-center tracking-[0.5em] text-[#c5a059] outline-none font-luxury"
-                onChange={e => setOtpInput(e.target.value)}
-              />
-            </div>
-            <div className="text-[#c5a059] font-bold text-xl font-mono">{formatTime(timer)}</div>
-            <button disabled={timer === 0} className="w-full gold-gradient py-4 font-bold text-black uppercase text-xs tracking-widest disabled:opacity-30">
-               {isRtl ? 'تأكيد الرمز' : 'Verify Code'}
-            </button>
+        {mode === 'otp' && (
+          <form onSubmit={handleVerify} className="space-y-8 text-center">
+             <div className="space-y-2">
+                <p className="text-[11px] text-white/60 uppercase tracking-[0.2em]">
+                   {isRtl ? 'أدخل الرمز المكون من 6 أرقام' : 'Enter the 6-digit security code'}
+                </p>
+                <p className="text-[9px] text-[#c5a059] font-bold underline">{currentOtpData?.email}</p>
+             </div>
+             <div className="relative">
+                <input 
+                  type="text" maxLength={6} required placeholder="000000"
+                  className="w-full bg-transparent border-b-2 border-[#c5a059] py-4 text-4xl text-center tracking-[0.5em] text-[#c5a059] outline-none font-luxury placeholder:opacity-10"
+                  onChange={e => setOtpInput(e.target.value)}
+                  autoFocus
+                />
+             </div>
+             <div className="flex flex-col items-center gap-2">
+                <div className="text-[#c5a059] font-mono text-2xl font-bold">{formatTime(timer)}</div>
+                <p className="text-[8px] text-white/20 uppercase tracking-widest">{isRtl ? 'الرمز صالح لمدة 5 دقائق' : 'Code valid for 5 minutes'}</p>
+             </div>
+             <button disabled={timer === 0 || loading} className="w-full gold-gradient py-4 font-bold text-black uppercase text-xs tracking-widest disabled:opacity-20 hover:scale-[1.02] transition-all">
+                {loading ? '...' : (isRtl ? 'تأكيد الرمز' : 'VERIFY CODE')}
+             </button>
           </form>
         )}
 
         {mode === 'forgot' && (
           <form onSubmit={handleForgotInit} className="space-y-6">
-            <h2 className="text-white text-center text-xs font-bold tracking-[0.2em] uppercase mb-4">{isRtl ? 'استعادة الوصول' : 'Reset Access'}</h2>
-            <p className="text-[10px] text-white/40 text-center uppercase tracking-widest">{isRtl ? 'أدخل بريدك وسنرسل لك رمزاً لتغيير كلمة السر' : 'Enter email to receive reset code'}</p>
+            <h3 className="text-white text-xs font-bold uppercase tracking-widest text-center mb-4">{isRtl ? 'استعادة كلمة المرور' : 'Password Recovery'}</h3>
             <input 
-              type="email" placeholder={isRtl ? "البريد الإلكتروني" : "Email"} required
+              type="email" placeholder={isRtl ? "أدخل بريدك المسجل" : "Enter registered email"} required
               className="w-full bg-white/5 border border-white/10 p-4 text-sm text-white focus:border-[#c5a059] outline-none"
               onChange={e => setFormData({...formData, email: e.target.value})}
             />
             <button className="w-full gold-gradient py-4 font-bold text-black uppercase text-xs tracking-widest">
-               {isRtl ? 'إرسال الرمز' : 'Send Code'}
+               {loading ? '...' : (isRtl ? 'إرسال رمز الاستعادة' : 'SEND RESET CODE')}
             </button>
-            <button type="button" onClick={() => setMode('login')} className="w-full text-white/40 text-[9px] uppercase font-bold tracking-[0.3em]">
-               {isRtl ? 'إلغاء' : 'Cancel'}
+            <button type="button" onClick={() => setMode('login')} className="w-full text-white/40 text-[9px] uppercase font-bold">
+               {isRtl ? 'إلغاء' : 'CANCEL'}
             </button>
           </form>
         )}
 
-        {mode === 'reset_pass' && (
+        {mode === 'reset' && (
           <form onSubmit={handleResetFinal} className="space-y-6">
-            <h2 className="text-white text-center text-xs font-bold tracking-[0.2em] uppercase mb-4">{isRtl ? 'كلمة مرور جديدة' : 'New Password'}</h2>
+            <h3 className="text-white text-xs font-bold uppercase tracking-widest text-center mb-4">{isRtl ? 'تعيين كلمة سر جديدة' : 'New Security Credentials'}</h3>
             <input 
               type="password" placeholder={isRtl ? "كلمة المرور الجديدة" : "New Password"} required
               className="w-full bg-white/5 border border-white/10 p-4 text-sm text-white focus:border-[#c5a059] outline-none"
               onChange={e => setFormData({...formData, newPass: e.target.value})}
             />
             <button className="w-full gold-gradient py-4 font-bold text-black uppercase text-xs tracking-widest">
-               {isRtl ? 'تحديث ودخول' : 'Update & Login'}
+               {loading ? '...' : (isRtl ? 'تحديث ودخول' : 'UPDATE & ACCESS')}
             </button>
           </form>
         )}

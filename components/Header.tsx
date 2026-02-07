@@ -12,7 +12,6 @@ interface Props {
 
 const Header: React.FC<Props> = ({ onOpenModal, lang, setLang }) => {
   const [isScrolled, setIsScrolled] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const { user, logout } = useAuth();
@@ -24,7 +23,6 @@ const Header: React.FC<Props> = ({ onOpenModal, lang, setLang }) => {
   }, []);
 
   const scrollToSection = (id: string) => {
-    setMobileMenuOpen(false);
     if (!id || id === '#' || id === '') {
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
@@ -73,7 +71,7 @@ const Header: React.FC<Props> = ({ onOpenModal, lang, setLang }) => {
                <div className={`flex items-center gap-4 ${isRtl ? 'flex-row-reverse' : 'flex-row'}`}>
                  <div className={`${isRtl ? 'text-right' : 'text-left'} hidden sm:block`}>
                    <div className="text-[9px] font-bold text-[#c5a059] uppercase tracking-widest">{isRtl ? 'المستثمر المعتمد' : 'Verified Investor'}</div>
-                   <div className="text-xs font-medium text-white/80">{user.firstName} {user.lastName}</div>
+                   <div className="text-xs font-medium text-white/80">{user.firstName} {user.fatherName} {user.lastName}</div>
                  </div>
                  <button 
                   onClick={() => setShowLogoutConfirm(true)}
@@ -98,7 +96,7 @@ const Header: React.FC<Props> = ({ onOpenModal, lang, setLang }) => {
       {showLogoutConfirm && (
         <div className="fixed inset-0 z-[400] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/90 backdrop-blur-md" onClick={() => setShowLogoutConfirm(false)} />
-          <div className="relative bg-[#1a0f0a] border border-white/10 p-10 max-w-sm w-full text-center">
+          <div className="relative bg-[#0d0805] border border-white/10 p-10 max-w-sm w-full text-center luxury-shadow">
              <h3 className="text-white text-sm font-bold uppercase tracking-widest mb-4">{isRtl ? 'تأكيد الخروج' : 'Confirm Logout'}</h3>
              <p className="text-white/40 text-[10px] uppercase tracking-widest mb-8 leading-loose">{isRtl ? 'هل أنت متأكد من إنهاء جلسة الاستثمار الحالية؟' : 'Are you sure you want to end your session?'}</p>
              <div className="flex gap-4">

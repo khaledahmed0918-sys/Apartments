@@ -6,7 +6,6 @@ export interface User {
   lastName: string;
   email: string;
   isVerified: boolean;
-  avatar?: string;
   joinedAt: string;
 }
 
@@ -19,6 +18,7 @@ export interface OTPData {
   code: string;
   expiresAt: number;
   email: string;
+  type: 'register' | 'forgot';
   userData?: any;
 }
 

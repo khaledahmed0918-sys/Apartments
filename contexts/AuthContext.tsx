@@ -2,12 +2,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, AuthState, OTPData } from '../types';
 
+const API_URL = "http://localhost:3000"; // عنوان السيرفر الخاص بك
+
 interface AuthContextType extends AuthState {
-  login: (email: string, pass: string) => Promise<{success: boolean, message?: string}>;
-  registerRequest: (userData: any) => Promise<string>; 
-  verifyAndRegister: (otp: string, originalOTP: string, userData: any) => Promise<boolean>;
-  forgotPasswordRequest: (email: string) => Promise<string | null>;
-  resetPassword: (email: string, otp: string, originalOTP: string, newPass: string) => Promise<boolean>;
+  login: (email: string, pass: string) => Promise<{success: boolean; message: string}>;
+  requestOTP: (email: string, type: 'register' | 'forgot', userData?: any) => Promise<{success: boolean; otpData?: OTPData; message?: string}>;
+  verifyAndRegister: (otp: string, otpData: OTPData) => Promise<{success: boolean; message: string}>;
+  resetPassword: (otp: string, otpData: OTPData, newPass: string) => Promise<{success: boolean; message: string}>;
   logout: () => void;
 }
 
@@ -18,114 +19,112 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const savedUser = localStorage.getItem('damac_user_session');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
+    const saved = localStorage.getItem('damac_session');
+    if (saved) setUser(JSON.parse(saved));
     setIsLoading(false);
   }, []);
 
   const login = async (email: string, pass: string) => {
-    const users = JSON.parse(localStorage.getItem('damac_registered_users') || '[]');
+    const users = JSON.parse(localStorage.getItem('damac_users') || '[]');
     const found = users.find((u: any) => u.email === email && u.pass === pass);
-    
     if (found) {
-      const sessionUser = { 
-        id: found.id, 
-        firstName: found.firstName, 
-        fatherName: found.fatherName,
-        lastName: found.lastName,
-        email: found.email, 
-        isVerified: true, 
-        joinedAt: found.joinedAt 
+      const sessionUser: User = { 
+        id: found.id, firstName: found.firstName, fatherName: found.fatherName, 
+        lastName: found.lastName, email: found.email, isVerified: true, joinedAt: found.joinedAt 
       };
       setUser(sessionUser);
-      localStorage.setItem('damac_user_session', JSON.stringify(sessionUser));
-      return { success: true };
+      localStorage.setItem('damac_session', JSON.stringify(sessionUser));
+      return { success: true, message: 'Welcome back' };
     }
     return { success: false, message: 'Invalid credentials' };
   };
 
-  const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
+  const requestOTP = async (email: string, type: 'register' | 'forgot', userData?: any) => {
+    try {
+      // إذا كان نسيان كلمة السر، نتأكد من وجود المستخدم أولاً
+      if (type === 'forgot') {
+        const users = JSON.parse(localStorage.getItem('damac_users') || '[]');
+        if (!users.find((u: any) => u.email === email)) {
+          return { success: false, message: 'Email not found' };
+        }
+      }
 
-  const registerRequest = async (userData: any) => {
-    const otp = generateOTP();
-    const expiry = Date.now() + 5 * 60 * 1000; // 5 minutes
-    console.log(`%c[MAIL SERVER] To: ${userData.email} | Subject: Verification Code | Code: ${otp} | Expires in: 5m`, "color: #c5a059; font-weight: bold;");
-    return otp;
-  };
+      const res = await fetch(`${API_URL}/send-code`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
 
-  const verifyAndRegister = async (otp: string, originalOTP: string, userData: any) => {
-    // In a real app, we'd check expiry here. Let's assume the UI handles the 5m timer.
-    if (otp === originalOTP) {
-      const newUser = { 
-        id: Math.random().toString(36).substr(2, 9), 
-        firstName: userData.firstName,
-        fatherName: userData.fatherName,
-        lastName: userData.lastName,
-        email: userData.email,
-        joinedAt: new Date().toISOString() 
-      };
-      
-      const users = JSON.parse(localStorage.getItem('damac_registered_users') || '[]');
-      users.push({ ...newUser, pass: userData.pass });
-      localStorage.setItem('damac_registered_users', JSON.stringify(users));
-      
-      const sessionUser = { ...newUser, isVerified: true };
-      setUser(sessionUser);
-      localStorage.setItem('damac_user_session', JSON.stringify(sessionUser));
-      return true;
+      const data = await res.json();
+
+      if (data.success) {
+        const otpData: OTPData = { 
+          code: data.code, 
+          expiresAt: data.expiresAt, 
+          email: email, 
+          type: type, 
+          userData 
+        };
+        return { success: true, otpData };
+      }
+      return { success: false, message: 'Failed to send mail' };
+    } catch (error) {
+      return { success: false, message: 'Server Unreachable' };
     }
-    return false;
   };
 
-  const forgotPasswordRequest = async (email: string) => {
-    const users = JSON.parse(localStorage.getItem('damac_registered_users') || '[]');
-    const found = users.find((u: any) => u.email === email);
-    if (!found) return null;
+  const verifyAndRegister = async (otp: string, otpData: OTPData) => {
+    if (Date.now() > new Date(otpData.expiresAt).getTime()) return { success: false, message: 'Expired' };
+    if (otp !== otpData.code) return { success: false, message: 'Invalid' };
 
-    const otp = generateOTP();
-    console.log(`%c[MAIL SERVER] To: ${email} | Subject: Password Reset | Code: ${otp}`, "color: #ff4444; font-weight: bold;");
-    return otp;
+    const newUser = { 
+      id: Math.random().toString(36).substr(2, 9), ...otpData.userData, 
+      joinedAt: new Date().toISOString() 
+    };
+    const users = JSON.parse(localStorage.getItem('damac_users') || '[]');
+    users.push(newUser);
+    localStorage.setItem('damac_users', JSON.stringify(users));
+
+    const sessionUser: User = { 
+      id: newUser.id, firstName: newUser.firstName, fatherName: newUser.fatherName, 
+      lastName: newUser.lastName, email: newUser.email, isVerified: true, joinedAt: newUser.joinedAt 
+    };
+    setUser(sessionUser);
+    localStorage.setItem('damac_session', JSON.stringify(sessionUser));
+    return { success: true, message: 'Success' };
   };
 
-  const resetPassword = async (email: string, otp: string, originalOTP: string, newPass: string) => {
-    if (otp !== originalOTP) return false;
+  const resetPassword = async (otp: string, otpData: OTPData, newPass: string) => {
+    if (Date.now() > new Date(otpData.expiresAt).getTime()) return { success: false, message: 'Expired' };
+    if (otp !== otpData.code) return { success: false, message: 'Invalid' };
 
-    let users = JSON.parse(localStorage.getItem('damac_registered_users') || '[]');
-    const userIndex = users.findIndex((u: any) => u.email === email);
-    
-    if (userIndex !== -1) {
-      users[userIndex].pass = newPass;
-      localStorage.setItem('damac_registered_users', JSON.stringify(users));
+    const users = JSON.parse(localStorage.getItem('damac_users') || '[]');
+    const idx = users.findIndex((u: any) => u.email === otpData.email);
+    if (idx !== -1) {
+      users[idx].pass = newPass;
+      localStorage.setItem('damac_users', JSON.stringify(users));
       
-      // Auto-login after reset
-      const found = users[userIndex];
-      const sessionUser = { 
-        id: found.id, 
-        firstName: found.firstName, 
-        fatherName: found.fatherName,
-        lastName: found.lastName,
-        email: found.email, 
-        isVerified: true, 
-        joinedAt: found.joinedAt 
+      const found = users[idx];
+      const sessionUser: User = { 
+        id: found.id, firstName: found.firstName, fatherName: found.fatherName, 
+        lastName: found.lastName, email: found.email, isVerified: true, joinedAt: found.joinedAt 
       };
       setUser(sessionUser);
-      localStorage.setItem('damac_user_session', JSON.stringify(sessionUser));
-      return true;
+      localStorage.setItem('damac_session', JSON.stringify(sessionUser));
+      return { success: true, message: 'Reset Successful' };
     }
-    return false;
+    return { success: false, message: 'Error' };
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('damac_user_session');
+    localStorage.removeItem('damac_session');
   };
 
   return (
     <AuthContext.Provider value={{ 
-      user, isLoading, login, registerRequest, verifyAndRegister, 
-      forgotPasswordRequest, resetPassword, logout 
+      user, isLoading, login, requestOTP, verifyAndRegister, 
+      resetPassword, logout 
     }}>
       {children}
     </AuthContext.Provider>
