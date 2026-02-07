@@ -1,7 +1,9 @@
 
 export interface User {
   id: string;
-  name: string;
+  firstName: string;
+  fatherName: string;
+  lastName: string;
   email: string;
   isVerified: boolean;
   avatar?: string;
@@ -11,6 +13,13 @@ export interface User {
 export interface AuthState {
   user: User | null;
   isLoading: boolean;
+}
+
+export interface OTPData {
+  code: string;
+  expiresAt: number;
+  email: string;
+  userData?: any;
 }
 
 export interface Property {
