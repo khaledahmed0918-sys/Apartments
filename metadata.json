@@ -1,0 +1,7 @@
+{
+  "name": "DAMAC Luxury Real Estate Clone",
+  "description": "A high-end, professional real estate landing page inspired by DAMAC Properties, featuring luxury property showcases, lead generation forms, and a premium aesthetic.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
