@@ -1,0 +1,6 @@
+
+name = "damac-luxury-clone"
+pages_build_output_dir = "dist"
+
+[vars]
+NODE_VERSION = "22.16.0"
