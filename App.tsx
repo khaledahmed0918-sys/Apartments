@@ -7,7 +7,7 @@ import PropertyCard from './components/PropertyCard';
 import Footer from './components/Footer';
 import Modal from './components/Modal';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { PROPERTIES, AMENITIES, RENTAL_LINKS } from './constants';
+import { PROPERTIES, AMENITIES } from './constants';
 
 const MainApp: React.FC = () => {
   const [lang, setLang] = useState<'ar' | 'en'>('ar');
@@ -60,7 +60,12 @@ const MainApp: React.FC = () => {
                 </div>
              </div>
              <div className="lg:w-1/2 relative">
-                <img src="https://images.unsplash.com/photo-1574950578143-858c6fc58922?auto=format&fit=crop&q=80&w=1200" className="w-full h-[500px] object-cover border border-white/5" alt="Office" />
+                <img 
+                  src="https://images.unsplash.com/photo-1574950578143-858c6fc58922?auto=format&fit=crop&q=80&w=1200" 
+                  className="w-full h-[500px] object-cover border border-white/5" 
+                  alt="Office" 
+                  loading="lazy"
+                />
                 <div className="absolute -bottom-10 -right-10 bg-[#c5a059] p-10 hidden xl:block">
                    <div className="text-black font-bold text-4xl font-luxury">01</div>
                    <div className="text-black/60 text-[10px] font-bold uppercase tracking-widest">{isRtl ? 'المطور الأول عالمياً' : 'World-Class Developer'}</div>
@@ -80,6 +85,34 @@ const MainApp: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
             {PROPERTIES[lang].map(p => (
               <PropertyCard key={p.id} property={p} onOpenModal={(t, c) => setModalState({isOpen: true, title: t, content: c})} isRtl={isRtl} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Amenities Section */}
+      <section className="py-32 bg-[#0d0805]">
+        <div className="container mx-auto px-6">
+          <div className="text-center mb-20">
+             <h2 className="text-4xl md:text-5xl font-luxury font-bold mb-6">{isRtl ? 'مرافق تليق بالملوك' : 'Amenities Fit for Royalty'}</h2>
+             <p className="text-white/40 uppercase tracking-[0.3em] text-[10px] font-bold">{isRtl ? 'خدماتنا الاستثنائية' : 'Exceptional Services'}</p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {AMENITIES[lang].map((amenity) => (
+              <div key={amenity.id} className="relative group overflow-hidden border border-white/5 aspect-square">
+                <img 
+                  src={amenity.image} 
+                  alt={amenity.name} 
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 brightness-50" 
+                  loading="lazy"
+                />
+                <div className="absolute inset-0 flex items-center justify-center p-6 text-center">
+                  <span className="text-white font-luxury text-xl tracking-wider opacity-80 group-hover:opacity-100 transition-opacity">
+                    {amenity.name}
+                  </span>
+                </div>
+                <div className="absolute bottom-0 left-0 w-full h-1 bg-[#c5a059] scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
+              </div>
             ))}
           </div>
         </div>

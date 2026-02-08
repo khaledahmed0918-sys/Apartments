@@ -123,7 +123,7 @@ export const COMMUNITY_DETAILS: Record<string, Record<string, { title: string; c
       title: 'مجتمع داماك هيلز الحصري',
       content: (
         <div className="space-y-6">
-          <img src="https://images.unsplash.com/photo-1582407947304-fd86f028f716?auto=format&fit=crop&q=80&w=1200" className="w-full h-64 object-cover border border-[#c5a059]/20" alt="DAMAC Hills" />
+          <img src="https://images.unsplash.com/photo-1582407947304-fd86f028f716?auto=format&fit=crop&q=80&w=1200" className="w-full h-64 object-cover border border-[#c5a059]/20" alt="DAMAC Hills" loading="lazy" />
           <p className="text-white/80 leading-loose">يعد داماك هيلز مجتمعاً متكاملاً وراقياً يمتد على مساحة 42 مليون قدم مربعة، ويضم مجموعة من العقارات الفاخرة التي تحيط بنادي ترامب إنترناشيونال غولف كلوب دبي.</p>
           <ul className="grid grid-cols-2 gap-4 text-[#c5a059] text-sm font-bold">
             <li>• نادي ترامب للغولف</li>
@@ -138,7 +138,7 @@ export const COMMUNITY_DETAILS: Record<string, Record<string, { title: string; c
       title: 'داماك لاجونز: العيش المستوحى من البحر المتوسط',
       content: (
         <div className="space-y-6">
-          <img src="https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&q=80&w=1200" className="w-full h-64 object-cover border border-[#c5a059]/20" alt="DAMAC Lagoons" />
+          <img src="https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&q=80&w=1200" className="w-full h-64 object-cover border border-[#c5a059]/20" alt="DAMAC Lagoons" loading="lazy" />
           <p className="text-white/80 leading-loose">اكتشف داماك لاجونز، حيث تلتقي الفخامة بالماء. يتكون هذا المجتمع من 8 مدن مستوحاة من أجمل وجهات البحر الأبيض المتوسط.</p>
         </div>
       )
@@ -147,7 +147,7 @@ export const COMMUNITY_DETAILS: Record<string, Record<string, { title: string; c
       title: 'وسط مدينة دبي: نبض الفخامة العالمي',
       content: (
         <div className="space-y-6">
-          <img src="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80&w=1200" className="w-full h-64 object-cover border border-[#c5a059]/20" alt="Downtown Dubai" />
+          <img src="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80&w=1200" className="w-full h-64 object-cover border border-[#c5a059]/20" alt="Downtown Dubai" loading="lazy" />
           <p className="text-white/80 leading-loose">يقع في قلب دبي وأكثر مناطقها شهرة عالمياً، حيث يتواجد برج خليفة ودبي مول.</p>
         </div>
       )
@@ -156,7 +156,7 @@ export const COMMUNITY_DETAILS: Record<string, Record<string, { title: string; c
       title: 'داماك كازا: الرفاهية المائية في الصفوح',
       content: (
         <div className="space-y-6">
-          <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&q=80&w=1200" className="w-full h-64 object-cover border border-[#c5a059]/20" alt="DAMAC Casa" />
+          <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&q=80&w=1200" className="w-full h-64 object-cover border border-[#c5a059]/20" alt="DAMAC Casa" loading="lazy" />
           <p className="text-white/80 leading-loose">برج سكني فريد مستوحى من حركة الأمواج والماء، يقع في منطقة الصفوح.</p>
         </div>
       )
@@ -167,7 +167,7 @@ export const COMMUNITY_DETAILS: Record<string, Record<string, { title: string; c
       title: 'DAMAC Hills Exclusive Community',
       content: (
         <div className="space-y-6">
-          <img src="https://images.unsplash.com/photo-1582407947304-fd86f028f716?auto=format&fit=crop&q=80&w=1200" className="w-full h-64 object-cover border border-[#c5a059]/20" alt="DAMAC Hills" />
+          <img src="https://images.unsplash.com/photo-1582407947304-fd86f028f716?auto=format&fit=crop&q=80&w=1200" className="w-full h-64 object-cover border border-[#c5a059]/20" alt="DAMAC Hills" loading="lazy" />
           <p className="text-white/80 leading-loose">DAMAC Hills is a well-established self-contained community comprising villas, apartments, and a hotel.</p>
           <ul className="grid grid-cols-2 gap-4 text-[#c5a059] text-sm font-bold">
             <li>• Trump Golf Club</li>
@@ -182,7 +182,7 @@ export const COMMUNITY_DETAILS: Record<string, Record<string, { title: string; c
       title: 'DAMAC Lagoons: Mediterranean Living',
       content: (
         <div className="space-y-6">
-          <img src="https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&q=80&w=1200" className="w-full h-64 object-cover border border-[#c5a059]/20" alt="DAMAC Lagoons" />
+          <img src="https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&q=80&w=1200" className="w-full h-64 object-cover border border-[#c5a059]/20" alt="DAMAC Lagoons" loading="lazy" />
           <p className="text-white/80 leading-loose">Discover DAMAC Lagoons, where luxury meets water in 8 Mediterranean-inspired cities.</p>
         </div>
       )

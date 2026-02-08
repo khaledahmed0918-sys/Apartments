@@ -12,7 +12,12 @@ const PropertyCard: React.FC<Props> = ({ property, onOpenModal, isRtl }) => {
   const handleDetailsClick = () => {
     onOpenModal(property.title, (
       <div className={`space-y-6 ${isRtl ? 'text-right' : 'text-left'}`}>
-        <img src={property.image} className="w-full h-64 object-cover border border-[#c5a059]/20" alt={property.title} />
+        <img 
+          src={property.image} 
+          className="w-full h-64 object-cover border border-[#c5a059]/20" 
+          alt={property.title} 
+          loading="lazy"
+        />
         <div className={`grid grid-cols-1 md:grid-cols-2 gap-8 ${isRtl ? 'flex-row-reverse' : ''}`}>
           <div className={isRtl ? 'order-1' : 'order-1'}>
             <h4 className="text-[#c5a059] font-bold text-lg mb-2">{isRtl ? 'عن المشروع' : 'About the Project'}</h4>
@@ -58,12 +63,12 @@ const PropertyCard: React.FC<Props> = ({ property, onOpenModal, isRtl }) => {
           src={property.image} 
           alt={property.title}
           className="w-full h-full object-cover transition-transform duration-[1.5s] group-hover:scale-110 brightness-75 group-hover:brightness-100"
+          loading="lazy"
         />
         <div className={`absolute top-6 ${isRtl ? 'right-6' : 'left-6'} glass text-[#c5a059] text-[9px] px-4 py-1.5 font-bold rounded-none uppercase tracking-widest`}>
           {property.type}
         </div>
         
-        {/* Modern Overlay - Simpler focus now */}
         <div className="absolute inset-0 bg-[#0d0805]/60 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col items-center justify-center gap-4">
            <button 
             onClick={handleDetailsClick}
